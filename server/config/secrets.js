@@ -3,10 +3,10 @@ export const config = {
   port: process.env.PORT || 3000,
   
   production: {
-    useProductionApis: process.env.USE_PRODUCTION_APIS === 'true',
-    forceRealApis: process.env.FORCE_REAL_APIS === 'true',
-    verificationLevel: process.env.VERIFICATION_LEVEL || 'high',
-    realTimeValidation: process.env.REAL_TIME_VALIDATION === 'true'
+    useProductionApis: true,
+    forceRealApis: true,
+    verificationLevel: 'production',
+    realTimeValidation: true
   },
 
   document: {

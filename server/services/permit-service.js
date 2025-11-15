@@ -60,17 +60,15 @@ async function fetchFromDHAAPI(endpoint, apiKey, permitType, retryCount = 0) {
 }
 
 async function loadPermitsFromDHA() {
-  const isDevelopment = !process.env.REPL_SLUG || process.env.NODE_ENV === 'development';
+  const isProduction = process.env.NODE_ENV === 'production';
+  const isDevelopment = !isProduction;
   
   if (isDevelopment) {
-    console.log('🔧 DEVELOPMENT MODE: Using verified fallback data for reliability');
-    console.log('💡 In production, this would connect to real DHA APIs');
-    console.log('📊 Current dataset: 13 official DHA permit records');
+    console.log('🔧 DEVELOPMENT MODE: Using verified fallback data');
     return getFallbackPermits();
   }
 
-  console.log('🚀 PRODUCTION MODE: Attempting DHA API connection...');
-  console.log('🔐 PKI Public Key:', config.document.pkiPublicKey ? '✅ CONFIGURED' : '❌ MISSING');
+  console.log('🌐 PRODUCTION MODE: Connecting to real DHA APIs...');\n  console.log('🔐 PKI Public Key:', config.document.pkiPublicKey ? '✅ CONFIGURED' : '⚠️  NOT SET');
 
   const permitSources = [
     { type: 'Permanent Residence', endpoint: config.endpoints.npr, apiKey: config.dha.nprApiKey },
