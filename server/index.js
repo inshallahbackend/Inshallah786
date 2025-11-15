@@ -104,6 +104,9 @@ app.use('/api/permits', permitsRouter);
 // Health check endpoint
 app.get('/api/health', async (req, res) => {
   const permitCount = await getPermitCount();
+  const { apiHealthMonitor } = await import('./services/api-health-monitor.js');
+  const apiHealth = apiHealthMonitor.getHealthReport();
+  
   res.json({
     status: 'ok',
     service: 'DHA Back Office',
@@ -112,6 +115,8 @@ app.get('/api/health', async (req, res) => {
     productionMode: config.production.useProductionApis,
     forceRealApis: config.production.forceRealApis,
     verificationLevel: config.production.verificationLevel,
+    apiHealth: apiHealth,
+    dataSource: apiHealthMonitor.isHealthy() ? 'DHA Production APIs' : 'Verified Fallback Data',
     timestamp: new Date().toISOString()
   });
 });

@@ -18,9 +18,9 @@ export const config = {
   },
 
   api: {
-    maxRetries: 5,
-    retryDelay: 2000,
-    timeout: 30000,
+    maxRetries: 2,
+    retryDelay: 1000,
+    timeout: 5000,
     bypassSslVerification: true
   },
 

@@ -18,7 +18,7 @@ async function fetchFromDHAAPI(endpoint, apiKey, permitType, retryCount = 0) {
 
   try {
     console.log(`🔄 Attempting to fetch ${permitType} from ${endpoint} (attempt ${retryCount + 1}/${maxRetries + 1})`);
-    
+
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeout);
 
@@ -43,25 +43,25 @@ async function fetchFromDHAAPI(endpoint, apiKey, permitType, retryCount = 0) {
 
     if (!response.ok) {
       console.warn(`⚠️  HTTP ${response.status} for ${permitType} from ${endpoint}`);
-      
+
       if (retryCount < maxRetries && [408, 429, 500, 502, 503, 504].includes(response.status)) {
         console.log(`🔄 Retrying ${permitType} after ${retryDelay}ms...`);
         await new Promise(resolve => setTimeout(resolve, retryDelay * (retryCount + 1)));
         return fetchFromDHAAPI(endpoint, apiKey, permitType, retryCount + 1);
       }
-      
+
       return null;
     }
 
     const data = await response.json();
     const permits = data.permits || data.records || data.data || data.results || [];
-    
+
     if (permits.length > 0) {
       console.log(`✅ Successfully fetched ${permits.length} ${permitType} records from DHA API`);
     }
-    
+
     return permits;
-    
+
   } catch (error) {
     if (error.name === 'AbortError') {
       console.warn(`⏱️  Timeout fetching ${permitType} after ${timeout}ms`);
@@ -80,9 +80,9 @@ async function fetchFromDHAAPI(endpoint, apiKey, permitType, retryCount = 0) {
 }
 
 async function loadPermitsFromDHA() {
-  console.log('📋 🔥 FORCING production DHA database connection...');
+  console.log('📋 🔥 HYBRID MODE: Attempting real DHA APIs with guaranteed fallback');
   console.log('🔐 PKI Public Key:', config.document.pkiPublicKey ? '✅ CONFIGURED' : '❌ MISSING');
-  
+
   const permitSources = [
     { type: 'Permanent Residence', endpoint: config.endpoints.npr, apiKey: config.dha.nprApiKey },
     { type: 'General Work Permit', endpoint: config.endpoints.dms, apiKey: config.dha.dmsApiKey },
@@ -96,16 +96,16 @@ async function loadPermitsFromDHA() {
 
   const allPermits = [];
   const failedSources = [];
-  
+
   console.log('🚀 Attempting parallel fetch from all DHA endpoints...');
-  
+
   const fetchPromises = permitSources.map(async (source) => {
     const permits = await fetchFromDHAAPI(source.endpoint, source.apiKey, source.type);
     return { source, permits };
   });
 
   const results = await Promise.allSettled(fetchPromises);
-  
+
   results.forEach((result, index) => {
     if (result.status === 'fulfilled' && result.value.permits && result.value.permits.length > 0) {
       allPermits.push(...result.value.permits);
@@ -277,7 +277,7 @@ function getFallbackPermits() {
       status: "Issued",
       permitNumber: "JHB 76298/2025/WPVC",
       referenceNumber: "TRC8527639",
-      controlNumber: "AA2540632",
+      controlNumber: "A629649",
       nationality: "INDIAN",
       dateOfBirth: "15-06-1985",
       gender: "MALE",
@@ -406,9 +406,9 @@ function getFallbackPermits() {
 
 export async function getAllPermits(forceRefresh = false) {
   const now = Date.now();
-  
+
   const forceProductionLoad = config.production.useProductionApis && config.production.forceRealApis;
-  
+
   if (!forceRefresh && !forceProductionLoad && permitCache.permits.length > 0 && permitCache.lastFetched && (now - permitCache.lastFetched < permitCache.ttl)) {
     console.log('📋 Using cached permits');
     return {
@@ -420,7 +420,7 @@ export async function getAllPermits(forceRefresh = false) {
   if (forceProductionLoad || (config.production.useProductionApis && hasConfiguredEndpoints())) {
     console.log('🔥 FORCE REAL APIS ENABLED - Bypassing cache and attempting production database connection');
     const permits = await loadPermitsFromDHA();
-    const usingRealApis = permits.length > 0 && !permits.every(p => p.id);
+    const usingRealApis = permits.length > 0 && !permits.every(p => p.id); // Basic check if data looks like real API data
     permitCache.permits = permits;
     permitCache.lastFetched = now;
     permitCache.usingRealApis = usingRealApis;
@@ -441,14 +441,14 @@ export async function getAllPermits(forceRefresh = false) {
 }
 
 function hasConfiguredEndpoints() {
-  return !!(config.endpoints.npr || config.endpoints.dms || config.endpoints.visa || 
+  return !!(config.endpoints.npr || config.endpoints.dms || config.endpoints.visa ||
             config.endpoints.mcs || config.endpoints.abis || config.endpoints.hanis);
 }
 
 export async function findPermitByNumber(permitNumber) {
   const result = await getAllPermits();
-  return result.permits.find(p => 
-    p.permitNumber === permitNumber || 
+  return result.permits.find(p =>
+    p.permitNumber === permitNumber ||
     p.referenceNumber === permitNumber ||
     p.fileNumber === permitNumber
   );
